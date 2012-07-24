@@ -55,7 +55,9 @@ class purchase_order(osv.osv):
                     for po_line in po.order_line:
                         line_vals = {'product_id': po_line.product_id.id}
                         #TODO extract in overridable method
-                        line_vals.update(sale_line_obj.product_id_change(cr, uid, [], so_vals['pricelist_id'], po_line.product_id.id, po_line.product_qty, po_line.product_uom.id, False, False, False, so_vals['partner_id'], False, True, False, False, False, False, context)['value'])
+                        on_change_vals = sale_line_obj.product_id_change(cr, uid, [], so_vals['pricelist_id'], po_line.product_id.id, po_line.product_qty, po_line.product_uom.id, False, False, False, so_vals['partner_id'], False, True, False, False, False, False, context)
+                        line_vals.update(on_change_vals['value'])
+                        line_vals['tax_id'] = [(6, 0, on_change_vals['value']['tax_id'])]
                         line_vals['price_unit'] = po_line.price_unit
                         line_vals['product_uom_qty'] = po_line.product_qty
                         line_vals['product_uom'] = po_line.product_uom.id
