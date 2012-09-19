@@ -32,7 +32,9 @@ TODO
     "init_xml" : [],
     "demo_xml" : [],
     "test" : [],
-    "update_xml": [],
+    "update_xml": [
+        "security/stock_security.xml",
+    ],
     'installable': True,
     'active': False,
     'certificate': None,

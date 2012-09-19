@@ -37,14 +37,14 @@ class purchase_order(osv.osv):
                 'shop_id': shop_id,
                 'origin': 'PO:%s' % str(po.name),
                 'purchase_id': po.id,
-                'partner_shipping_id': po.dest_address_id.id #manual or automatic drop shipping
+                'partner_shipping_id': po.dest_address_id.id, #manual or automatic drop shipping
             })
         return vals
 
     def _prepare_linked_sale_order_line(self, cr, uid, po_line, so_vals, context=None):
         sale_line_obj = self.pool.get("sale.order.line")
         vals = {'product_id': po_line.product_id.id}
-        on_change_vals = sale_line_obj.product_id_change(cr, uid, [], so_vals['pricelist_id'], 
+        on_change_vals = sale_line_obj.product_id_change(cr, uid, [], so_vals['pricelist_id'],
                                 po_line.product_id.id, po_line.product_qty, po_line.product_uom.id,
                                 False, False, False, so_vals['partner_id'], False, True, False,
                                 False, False, False, context)
@@ -66,6 +66,7 @@ class purchase_order(osv.osv):
         move_obj = self.pool.get("stock.move")
         res = super(purchase_order, self).wkf_confirm_order(cr, uid, ids, context)
         for po in self.browse(cr, uid, ids, context=context):
+            uid=8#TODO FIXME use a special user instead
             partner_id = po.partner_id.id
             comp_ids = self.pool.get('res.company').search(cr, uid, [('partner_id', '=', partner_id)])
             if comp_ids:
@@ -90,6 +91,8 @@ class purchase_order(osv.osv):
         move_obj = self.pool.get('stock.move')
         picking_obj = self.pool.get('stock.picking')
         for po in self.browse(cr, uid, ids):
+            uid = 8 #TODO FIXME
+            #All of this actiopn should be done by the user of the other company
             sale_ids = sale_obj.search(cr, uid, [('purchase_id', '=', po.id)]) #TODO create function field?
             if sale_ids:
                 so = sale_obj.browse(cr, uid, sale_ids[0], context=context)
@@ -99,6 +102,7 @@ class purchase_order(osv.osv):
                         move_obj.write(cr, uid, [move.id for move in so_line.purchase_line_id.move_ids], {'sale_line_id': so_line.id})
                         for move in so_line.purchase_line_id.move_ids:
                             picking_ids.add(move.picking_id.id)
-                picking_obj.write(cr, uid, [i for i in picking_ids], {'sale_id': so.id})
+                picking_obj.write(cr, uid, [i for i in picking_ids],
+                                  {'sale_id': so.id, 'company_id':1}) #TODO FIXME company_id?
                 sale_obj.write(cr, uid, [so.id], {'shipped': False})
-        return res 
+        return res

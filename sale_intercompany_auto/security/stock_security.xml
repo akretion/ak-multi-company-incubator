@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+<data noupdate="0">
+
+    <!-- There is no easy way to support multi company on object
+    We should implement it in orm, for example adding a field company_ids
+    For now I just unactive the rule, not a good solution but it work for my case -->
+
+    <record model="ir.rule" id="stock.stock_picking_rule">
+        <field name="active" eval="False"/>
+    </record>
+
+    <record model="ir.rule" id="stock.stock_warehouse_comp_rule">
+        <field name="active" eval="False"/>
+    </record>
+
+    <record model="ir.rule" id="stock.stock_location_comp_rule">
+        <field name="active" eval="False"/>
+    </record>
+
+     <record model="ir.rule" id="stock.stock_move_rule">
+        <field name="active" eval="False"/>
+     </record>
+
+</data>
+</openerp>
