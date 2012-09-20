@@ -34,6 +34,8 @@ TODO
     "test" : [],
     "update_xml": [
         "security/stock_security.xml",
+        "stock_data.xml",
+        "partner_view.xml",
     ],
     'installable': True,
     'active': False,

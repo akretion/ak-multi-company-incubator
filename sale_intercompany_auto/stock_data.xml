@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data noupdate="1">
+
+        <!--
+    Resource: stock.location
+    -->
+
+        <record id="location_intercompany_transfert" model="stock.location">
+            <field name="name">Intercompany Transferts</field>
+            <field name="usage">transit</field>
+            <field name="company_id"></field>
+        </record>
+
+    </data>
+</openerp>

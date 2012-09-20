@@ -38,6 +38,7 @@ class purchase_order(osv.osv):
                 'origin': 'PO:%s' % str(po.name),
                 'purchase_id': po.id,
                 'partner_shipping_id': po.dest_address_id.id, #manual or automatic drop shipping
+                'is_intercompany': True,
             })
         return vals
 
@@ -85,24 +86,3 @@ class purchase_order(osv.osv):
                     wf_service.trg_validate(uid, 'sale.order', so_id, 'order_confirm', cr) #TODO optional
         return res
 
-    def action_picking_create(self, cr, uid, ids, context=None):
-        res = super(purchase_order, self).action_picking_create(cr, uid, ids, context)
-        sale_obj = self.pool.get('sale.order')
-        move_obj = self.pool.get('stock.move')
-        picking_obj = self.pool.get('stock.picking')
-        for po in self.browse(cr, uid, ids):
-            uid = 8 #TODO FIXME
-            #All of this actiopn should be done by the user of the other company
-            sale_ids = sale_obj.search(cr, uid, [('purchase_id', '=', po.id)]) #TODO create function field?
-            if sale_ids:
-                so = sale_obj.browse(cr, uid, sale_ids[0], context=context)
-                picking_ids = set()
-                for so_line in so.order_line:
-                    if so_line.purchase_line_id:
-                        move_obj.write(cr, uid, [move.id for move in so_line.purchase_line_id.move_ids], {'sale_line_id': so_line.id})
-                        for move in so_line.purchase_line_id.move_ids:
-                            picking_ids.add(move.picking_id.id)
-                picking_obj.write(cr, uid, [i for i in picking_ids],
-                                  {'sale_id': so.id, 'company_id':1}) #TODO FIXME company_id?
-                sale_obj.write(cr, uid, [so.id], {'shipped': False})
-        return res

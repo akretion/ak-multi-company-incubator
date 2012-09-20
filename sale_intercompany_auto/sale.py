@@ -29,14 +29,9 @@ class sale_order(osv.osv):
 
     _columns = {
         'purchase_id': fields.many2one('purchase.order', 'Purchase Order'),
+        'is_intercompany': fields.boolean('Intercompany SO', help=('Checked if the SO is an'
+                                          'intercompany sale order')),
     }
-
-    def _create_pickings_and_procurements(self, cr, uid, order, order_lines, picking_id=False, context=None):
-        if order.purchase_id:
-            return True
-        else:
-            return super(sale_order, self)._create_pickings_and_procurements(cr, uid, order, order_lines, picking_id, context)
-
 
 class sale_order_line(osv.osv):
     _inherit = "sale.order.line"
