@@ -29,6 +29,10 @@ class purchase_order(osv.osv):
 
     _inherit = "purchase.order"
 
+    _columns = {
+        'is_intercompany': fields.boolean('Intercompany Purchase'),
+    }
+
     def _prepare_linked_sale_order(self, cr, uid, po, shop_id, context=None):
         sale_obj = self.pool.get("sale.order")
         vals = {'partner_id': po.company_id.partner_id.id}
@@ -67,22 +71,31 @@ class purchase_order(osv.osv):
         move_obj = self.pool.get("stock.move")
         res = super(purchase_order, self).wkf_confirm_order(cr, uid, ids, context)
         for po in self.browse(cr, uid, ids, context=context):
-            uid=8#TODO FIXME use a special user instead
+            supplier_uid = 8#TODO FIXME use a special user instead
             partner_id = po.partner_id.id
-            comp_ids = self.pool.get('res.company').search(cr, uid, [('partner_id', '=', partner_id)])
+            comp_ids = self.pool.get('res.company').search(cr, supplier_uid, [('partner_id', '=', partner_id)])
             if comp_ids:
                 comp_id = comp_ids[0]
-                shop_ids = shop_obj.search(cr, uid, [('company_id', '=', comp_id)])
+                shop_ids = shop_obj.search(cr, supplier_uid, [('company_id', '=', comp_id)])
                 if shop_ids:
-                    so_vals = self._prepare_linked_sale_order(cr, uid, po, shop_ids[0], context=context)
+                    so_vals = self._prepare_linked_sale_order(cr, supplier_uid, po, shop_ids[0], context=context)
                     order_line = []
                     for po_line in po.order_line:
                         order_line.append((0, 0, self._prepare_linked_sale_order_line(
-                                                    cr, uid, po_line, so_vals, context=context)
+                                                    cr, supplier_uid, po_line, so_vals, context=context)
                                             ))
                     so_vals['order_line'] = order_line
-                    so_id = sale_obj.create(cr, uid, so_vals, context)
+                    so_id = sale_obj.create(cr, supplier_uid, so_vals, context)
                     wf_service = netsvc.LocalService("workflow")
-                    wf_service.trg_validate(uid, 'sale.order', so_id, 'order_confirm', cr) #TODO optional
+                    wf_service.trg_validate(supplier_uid, 'sale.order', so_id, 'order_confirm', cr) #TODO optional
+                    po.write({'is_intercompany': True}, context=context)
         return res
+
+    def action_invoice_create(self, cr, uid, ids, context=None):
+        ids = self.search(cr, uid,[
+                        ('id', 'in', ids),
+                        ('is_intercompany', '=', False)
+                    ], context=context)
+        return super(purchase_order, self).action_invoice_create(cr, uid,
+                                                            ids, context=context)
 
