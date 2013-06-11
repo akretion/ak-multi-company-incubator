@@ -27,7 +27,7 @@ class stock_move(Model):
 
     #TODO FIXME do something better, need some refactor in addons
     def create_chained_picking(self, cr, uid, moves, context=None):
-        if moves[0].picking_id.sale_id and moves[0].picking_id.sale_id.is_intercompany:
+        if moves and moves[0].picking_id.sale_id and moves[0].picking_id.sale_id.is_intercompany:
             if context is None: context = {}
             context['intercompany_partner_id'] = moves[0].picking_id.sale_id.partner_id.id
         return super(stock_move, self).create_chained_picking(cr, uid, moves, context=context)
