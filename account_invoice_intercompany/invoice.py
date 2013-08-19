@@ -62,18 +62,18 @@ class account_invoice(orm.Model):
     def _prepare_intercompany_line(self, cr, uid, line, invoice_vals, company_id, context=None):
         invoice_line_obj = self.pool['account.invoice.line']
         onchange_vals = invoice_line_obj.product_id_change(cr, uid, False,
-                                                           line.product_id.id,
-                                                           False,
-                                                           qty=line.quantity,
-                                                           name=line.name,
-                                                           type='in_invoice',
-                                                           partner_id=line.invoice_id.company_id.partner_id.id,
-                                                           fposition_id=invoice_vals.get('fiscal_position', False),
-                                                           price_unit=line.price_unit,
-                                                           address_invoice_id=invoice_vals.get('address_invoice_id', False),
-                                                           currency_id=invoice_vals.get('currency_id', False),
-                                                           context=context,
-                                                           company_id=company_id)
+                           line.product_id.id,
+                           False,
+                           qty=line.quantity,
+                           name=line.name,
+                           type='in_invoice',
+                           partner_id=line.invoice_id.company_id.partner_id.id,
+                           fposition_id=invoice_vals.get('fiscal_position', False),
+                           price_unit=line.price_unit,
+                           address_invoice_id=invoice_vals.get('address_invoice_id', False),
+                           currency_id=invoice_vals.get('currency_id', False),
+                           context=context,
+                           company_id=company_id)
         line_vals = onchange_vals['value']
         line_vals.update({
                 'origin': line.invoice_id.number,
@@ -98,7 +98,6 @@ class account_invoice(orm.Model):
                                                          context=context)
             lines.append(line_vals)
         invoice_vals.update({'invoice_line': lines})
-        import pdb;pdb.set_trace()
         new_invoice_id = self.create(cr, uid, invoice_vals, context=context)
         self.button_reset_taxes(cr, uid, [new_invoice_id], context=context)
         amounts = self.read(cr, SUPERUSER_ID,

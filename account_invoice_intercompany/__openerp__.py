@@ -30,7 +30,10 @@
     'description': """empty""",
     'author': 'Akretion',
     'website': 'http://www.akretion.com/',
-    'depends': ['account'], 
+    'depends': [
+        'account',
+        'multi_company_action_user',
+    ], 
     'init_xml': [],
     'update_xml': [ 
     ],
