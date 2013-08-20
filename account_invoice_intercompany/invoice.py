@@ -70,7 +70,6 @@ class account_invoice(orm.Model):
                            partner_id=line.invoice_id.company_id.partner_id.id,
                            fposition_id=invoice_vals.get('fiscal_position', False),
                            price_unit=line.price_unit,
-                           address_invoice_id=invoice_vals.get('address_invoice_id', False),
                            currency_id=invoice_vals.get('currency_id', False),
                            context=context,
                            company_id=company_id)
@@ -83,7 +82,7 @@ class account_invoice(orm.Model):
                 'company_id': company_id,
                 'invoice_line_tax_id': [(6, 0, onchange_vals['value']['invoice_line_tax_id'])],
             })
-        return (0, 0, line_vals)
+        return line_vals
 
 
     def create_intercompany_invoice(self, cr, uid, invoice, company_id, context=None):
@@ -96,7 +95,7 @@ class account_invoice(orm.Model):
                                                          invoice_vals,
                                                          company_id,
                                                          context=context)
-            lines.append(line_vals)
+            lines.append((0, 0, line_vals))
         invoice_vals.update({'invoice_line': lines})
         new_invoice_id = self.create(cr, uid, invoice_vals, context=context)
         self.button_reset_taxes(cr, uid, [new_invoice_id], context=context)
@@ -118,7 +117,7 @@ class account_invoice(orm.Model):
         for invoice in self.browse(cr, uid, ids, context=None):
             if invoice.type != 'out_invoice' or invoice.customer_related_invoice_id:
                 continue
-            company_ids = company_obj.search(cr, uid,
+            company_ids = company_obj.search(cr, SUPERUSER_ID,
                                              [('partner_id', '=', invoice.partner_id.id)],
                                              context=context)
             if company_ids:
@@ -127,7 +126,7 @@ class account_invoice(orm.Model):
                                           _('The partner : %s of the invoice : '
                                             '%s is linked to several companies.')
                                           % (invoice.partner_id.name, invoice.number))
-                other_company_uid = company_obj.get_company_action_user(cr, uid,
+                other_company_uid = company_obj.get_company_action_user(cr, SUPERUSER_ID,
                                                                         company_ids[0],
                                                                         context=context)
                 new_invoice_id = self.create_intercompany_invoice(cr, other_company_uid, invoice,
