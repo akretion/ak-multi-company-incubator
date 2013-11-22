@@ -35,7 +35,8 @@
         'multi_company_action_user',
     ], 
     'init_xml': [],
-    'update_xml': [ 
+    'update_xml': [
+        'invoice_view.xml',
     ],
     'demo_xml': [],
     'installable': True,

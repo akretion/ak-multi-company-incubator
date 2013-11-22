@@ -29,11 +29,32 @@ from openerp import SUPERUSER_ID
 class account_invoice(orm.Model):
     _inherit = "account.invoice"
 
+    def _get_intercompany_invoice(self, cr, uid, ids, name, args, context=None):
+        res = {}
+        for invoice in self.read(cr, SUPERUSER_ID, ids, ['customer_related_invoice_id'], context=context):
+            if invoice['customer_related_invoice_id']:
+                res[invoice['id']] = True
+        return res
+
     _columns = {
-        'customer_related_invoice_id': fields.many2one('account.invoice',
-                                                       'Related Invoice of the other company'),
+        'customer_related_invoice_id': fields.many2one(
+            'account.invoice',
+            'Related Invoice of the other company'),
+        'intercompany_invoice': fields.function(
+            _get_intercompany_invoice,
+            type="boolean",
+            string='Intercompany invoice',
+            help="Is this box is checked, an intercompany invoice has already "
+            "been created.",
+            store={
+                'account.invoice':
+                    (lambda self, cr, uid, ids, c=None:
+                        ids,
+                        ['customer_related_invoice_id'],
+                        10),
+                }),
     }
-    
+
     def _prepare_intercompany_invoice(self, cr, uid, invoice, company_id, context=None):
         journal_obj = self.pool['account.journal']
         onchange_vals = self.onchange_partner_id(cr, uid, False, 'in_invoice',
@@ -46,13 +67,28 @@ class account_invoice(orm.Model):
         journal_ids = journal_obj.search(cr, uid, [('company_id','=',company_id),
                                                    ('type', '=', 'purchase')],
                                          context=context)
+        currency_obj = self.pool['res.currency']
+        currency_id = currency_obj.search(cr, uid, [
+            ['name', '=', invoice.currency_id.name],
+            ['company_id', '=', company_id],
+            ], context=context)
+        if not currency_id:
+            raise orm.orm_except(_('USER ERROR'),
+                _('No currency %s found in the company id %s')
+                %(invoice.currency_id.name, company_id))
+        elif len(currency_id) > 1:
+            raise orm.orm_except(_('USER ERROR'),
+                _('Too many currency found for the code %s in the company id %s')
+                %(invoice.currency_id.name, company_id))
+        else:
+            currency_id = currency_id[0]
         invoice_vals.update({
                         'type': 'in_invoice',
                         'partner_id': invoice.company_id.partner_id.id,
                         'date_invoice': invoice.date_invoice,
                         'date_due': invoice.date_due,
                         'origin': invoice.number,
-                        'currency_id': invoice.currency_id.id,
+                        'currency_id': currency_id,
                         'name': 'Intercompany invoice from %s' % invoice.name,
                         'journal_id': journal_ids and journal_ids[0] or False,
                         'comment': invoice.comment,
@@ -76,7 +112,9 @@ class account_invoice(orm.Model):
         line_vals = onchange_vals['value']
         line_vals.update({
                 'origin': line.invoice_id.number,
+                'name': line.name,
                 'price_unit': line.price_unit,
+                'discount': line.discount,
                 'quantity': line.quantity,
                 'product_id': line.product_id.id,
                 'company_id': company_id,
@@ -85,7 +123,7 @@ class account_invoice(orm.Model):
         return line_vals
 
 
-    def create_intercompany_invoice(self, cr, uid, invoice, company_id, context=None):
+    def _create_intercompany_invoice(self, cr, uid, invoice, company_id, context=None):
         wf_service = netsvc.LocalService("workflow")
         invoice_vals = self._prepare_intercompany_invoice(cr, uid, invoice, company_id, context=context)
         lines = []
@@ -111,8 +149,7 @@ class account_invoice(orm.Model):
         wf_service.trg_validate(uid, 'account.invoice', new_invoice_id, 'invoice_open', cr)
         return new_invoice_id
 
-    def action_number(self, cr, uid, ids, context=None):
-        super(account_invoice, self).action_number(cr, uid, ids, context=context)
+    def create_intercompany_invoice(self, cr, uid, ids, context=None):
         company_obj = self.pool['res.company']
         for invoice in self.browse(cr, uid, ids, context=None):
             if invoice.type != 'out_invoice' or invoice.customer_related_invoice_id:
@@ -129,8 +166,7 @@ class account_invoice(orm.Model):
                 other_company_uid = company_obj.get_company_action_user(cr, SUPERUSER_ID,
                                                                         company_ids[0],
                                                                         context=context)
-                new_invoice_id = self.create_intercompany_invoice(cr, other_company_uid, invoice,
+                new_invoice_id = self._create_intercompany_invoice(cr, other_company_uid, invoice,
                                                  company_ids[0], context=context)
                 invoice.write({'customer_related_invoice_id': new_invoice_id})
         return True
-
