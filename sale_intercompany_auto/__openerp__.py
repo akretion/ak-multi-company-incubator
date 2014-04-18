@@ -25,7 +25,7 @@
     "author" : "Akretion",
     "website" : "http://www.openerp.com",
     "category" : "Generic Modules/Purchase",
-    "depends" : ["purchase", "sale"],
+    "depends" : ["purchase", "sale", 'multi_company_supplier'],
     "description": """
 TODO
     """,
