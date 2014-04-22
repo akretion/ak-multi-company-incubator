@@ -45,7 +45,8 @@ class account_invoice(orm.Model):
     _columns = {
         'customer_related_invoice_id': fields.many2one(
             'account.invoice',
-            'Related Invoice of the other company'),
+            'Related Invoice of the other company'
+        ),
         'intercompany_invoice': fields.function(
             _get_intercompany_invoice,
             type="boolean",
@@ -63,10 +64,13 @@ class account_invoice(orm.Model):
 
     def _prepare_intercompany_invoice(self, cr, uid, invoice, company_id,
                                       context=None):
+        partner_obj = self.pool['res.partner']
         journal_obj = self.pool['account.journal']
+        partner_id = partner_obj.find_company_partner_id(
+            cr, uid, invoice.company_id.id, context=context
+        )
         onchange_vals = self.onchange_partner_id(
-            cr, uid, False, 'in_invoice',
-            invoice.company_id.partner_id.id,
+            cr, uid, False, 'in_invoice', partner_id,
             date_invoice=invoice.date_invoice,
             payment_term=invoice.payment_term,
             partner_bank_id=False,
@@ -81,18 +85,22 @@ class account_invoice(orm.Model):
             context=context
         )
         currency_obj = self.pool['res.currency']
-        currency_id = currency_obj.search(cr, uid, [
-            ['name', '=', invoice.currency_id.name],
-            ['company_id', '=', company_id],
-            ], context=context)
+        currency_id = currency_obj.search(
+            cr, uid,
+            [
+                ('name', '=', invoice.currency_id.name),
+                ('company_id', 'in', [company_id, False])
+            ],
+            context=context
+        )
         if not currency_id:
-            raise orm.orm_except(
+            raise osv.except_osv(
                 _('USER ERROR'),
                 _('No currency %s found in the company id %s')
                 % (invoice.currency_id.name, company_id)
             )
         elif len(currency_id) > 1:
-            raise orm.orm_except(
+            raise osv.except_osv(
                 _('USER ERROR'),
                 _('Too many currency found for the code %s in the company id '
                   '%s') % (invoice.currency_id.name, company_id)
@@ -100,8 +108,8 @@ class account_invoice(orm.Model):
         else:
             currency_id = currency_id[0]
         invoice_vals.update({
+            'partner_id': partner_id,
             'type': 'in_invoice',
-            'partner_id': invoice.company_id.partner_id.id,
             'date_invoice': invoice.date_invoice,
             'date_due': invoice.date_due,
             'origin': invoice.number,
@@ -112,17 +120,44 @@ class account_invoice(orm.Model):
         })
         return invoice_vals
 
+    def _find_customer_product_id(self, cr, uid, product_id, partner_id,
+                                  context=None):
+        supplierinfo_obj = self.pool.get('product.supplierinfo')
+        product_supplierinfo_ids = supplierinfo_obj.search(
+            cr, uid,
+            [
+                ('supplier_product_id', '=', product_id),
+                ('name', '=', partner_id),
+            ],
+            context=context
+        )
+        if not product_supplierinfo_ids:
+            return False
+        supplierinfos = supplierinfo_obj.read(
+            cr, uid, product_supplierinfo_ids[0], context=context
+        )
+        return supplierinfos['product_id'][0]
+
     def _prepare_intercompany_line(self, cr, uid, line, invoice_vals,
                                    company_id, context=None):
+        partner_obj = self.pool['res.partner']
+        partner_id = partner_obj.find_company_partner_id(
+            cr, uid, line.invoice_id.company_id.id, context=context
+        )
+
+        product_id = self._find_customer_product_id(
+            cr, uid, line.product_id.id, partner_id, context=context
+        )
+
         invoice_line_obj = self.pool['account.invoice.line']
         onchange_vals = invoice_line_obj.product_id_change(
             cr, uid, False,
-            line.product_id.id,
+            product_id,
             False,
             qty=line.quantity,
             name=line.name,
             type='in_invoice',
-            partner_id=line.invoice_id.company_id.partner_id.id,
+            partner_id=partner_id,
             fposition_id=invoice_vals.get('fiscal_position', False),
             price_unit=line.price_unit,
             currency_id=invoice_vals.get('currency_id', False),
@@ -176,31 +211,28 @@ class account_invoice(orm.Model):
 
         return new_invoice_id
 
+    def _get_partner_company_id(self, cr, uid, partner_id, context=None):
+        partner_obj = self.pool.get('res.partner')
+        partner = partner_obj.browse(cr, uid, partner_id, context=context)
+        return partner.partner_company_id.id
+
     def create_intercompany_invoice(self, cr, uid, ids, context=None):
-        company_obj = self.pool['res.company']
+        company_obj = self.pool.get('res.company')
         for invoice in self.browse(cr, uid, ids, context=None):
             if (invoice.type != 'out_invoice'
                     or invoice.customer_related_invoice_id):
                 continue
-            company_ids = company_obj.search(
-                cr, SUPERUSER_ID,
-                [('partner_id', '=', invoice.partner_id.id)],
-                context=context
+            company_id = self._get_partner_company_id(
+                cr, uid, invoice.partner_id.id, context=context
             )
-            if company_ids:
-                if len(company_ids) > 1:
-                    raise osv.except_osv(
-                        _('Configuration Error !'),
-                        _('The partner : %s of the invoice : '
-                          '%s is linked to several companies.')
-                        % (invoice.partner_id.name, invoice.number)
-                    )
-                other_company_uid = company_obj.get_company_action_user(
-                    cr, SUPERUSER_ID, company_ids[0], context=context
-                )
-                new_invoice_id = self._create_intercompany_invoice(
-                    cr, other_company_uid,
-                    invoice, company_ids[0], context=context
-                )
-                invoice.write({'customer_related_invoice_id': new_invoice_id})
+            if not company_id:
+                continue
+            other_company_uid = company_obj.get_company_action_user(
+                cr, SUPERUSER_ID, company_id, context=context
+            )
+            new_invoice_id = self._create_intercompany_invoice(
+                cr, other_company_uid,
+                invoice, company_id, context=context
+            )
+            invoice.write({'customer_related_invoice_id': new_invoice_id})
         return True

@@ -18,7 +18,7 @@
                         <button name="create_intercompany_invoice"
                                 string="Create intercompany invoice"
                                 type="object"
-                                attrs="{'invisible':[('customer_related_invoice_id', '!=', False), ('state', 'not in', ['open','done'])]}"/>
+                                attrs="{'invisible':[('customer_related_invoice_id', '!=', False), ('state', 'not in', ['open','done']), ('type', '!=', 'out_invoice')]}"/>
                 </button>
                 <field name="origin" position="after">
                     <field name="customer_related_invoice_id" invisible="1"/>
