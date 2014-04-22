@@ -19,9 +19,6 @@
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###############################################################################
-
-
-
 {
     'name': 'account_invoice_intercompany',
     'version': '0.1',
@@ -42,4 +39,3 @@
     'installable': True,
     'active': False,
 }
-
