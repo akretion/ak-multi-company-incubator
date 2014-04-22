@@ -33,27 +33,21 @@ class purchase_order(osv.osv):
         'is_intercompany': fields.boolean('Intercompany Purchase'),
     }
 
-    def _find_supplier_partner_id(self, cr, uid, po, context=None):
-        partner_obj = self.pool.get('res.partner')
-        partner_ids = partner_obj.search(
-            cr, uid,
-            [('partner_company_id', '=', po.company_id.id)],
-            context=context
-        )
-        return partner_ids[0]
-
     def _prepare_linked_sale_order(self, cr, uid, po, shop_id, context=None):
         sale_obj = self.pool.get("sale.order")
-        partner_id = self._find_supplier_partner_id(cr, uid, po, context=context)
+        partner_obj = self.pool.get('res.partner')
+        partner_id = partner_obj.find_company_partner_id(
+            cr, uid, po.company_id.id, context=context
+        )
         vals = {'partner_id': partner_id}
         vals.update(sale_obj.onchange_partner_id(cr, uid, [], vals['partner_id'])['value'])
         vals.update({
-                'shop_id': shop_id,
-                'origin': 'PO:%s' % str(po.name),
-                'purchase_id': po.id,
-                'partner_shipping_id': partner_id,
-                'is_intercompany': True,
-            })
+            'shop_id': shop_id,
+            'origin': 'PO:%s' % str(po.name),
+            'purchase_id': po.id,
+            'partner_shipping_id': partner_id,
+            'is_intercompany': True,
+        })
         return vals
 
     def _find_supplier_product_id(self, cr, uid, po_line, context=None):
