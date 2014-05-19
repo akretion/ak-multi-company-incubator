@@ -67,7 +67,10 @@ class account_invoice(orm.Model):
         partner_obj = self.pool['res.partner']
         journal_obj = self.pool['account.journal']
         partner_id = partner_obj.find_company_partner_id(
-            cr, uid, invoice.company_id.id, context=context
+            cr, uid,
+            invoice.company_id.id,
+            invoice.partner_id.partner_company_id.id,
+            context=context
         )
         onchange_vals = self.onchange_partner_id(
             cr, uid, False, 'in_invoice', partner_id,
@@ -142,7 +145,10 @@ class account_invoice(orm.Model):
                                    company_id, context=None):
         partner_obj = self.pool['res.partner']
         partner_id = partner_obj.find_company_partner_id(
-            cr, uid, line.invoice_id.company_id.id, context=context
+            cr, uid,
+            line.invoice_id.company_id.id,
+            line.invoice_id.partner_id.partner_company_id.id,
+            context=context
         )
 
         product_id = self._find_customer_product_id(

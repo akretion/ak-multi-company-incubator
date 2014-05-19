@@ -37,7 +37,10 @@ class purchase_order(osv.osv):
         sale_obj = self.pool.get("sale.order")
         partner_obj = self.pool.get('res.partner')
         partner_id = partner_obj.find_company_partner_id(
-            cr, uid, po.company_id.id, context=context
+            cr, uid,
+            po.company_id.id,
+            po.partner_id.partner_company_id,
+            context=context
         )
         vals = {'partner_id': partner_id}
         vals.update(sale_obj.onchange_partner_id(cr, uid, [], vals['partner_id'])['value'])
