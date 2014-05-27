@@ -21,8 +21,9 @@
 #
 ##############################################################################
 
-from osv import osv, fields
-import netsvc
+from openerp import netsvc
+from openerp.osv import osv, fields
+from openerp.tools.translate import _
 
 
 class purchase_order(osv.osv):
@@ -39,7 +40,7 @@ class purchase_order(osv.osv):
         partner_id = partner_obj.find_company_partner_id(
             cr, uid,
             po.company_id.id,
-            po.partner_id.partner_company_id,
+            po.partner_id.partner_company_id.id,
             context=context
         )
         vals = {'partner_id': partner_id}
@@ -65,6 +66,14 @@ class purchase_order(osv.osv):
         product_id = self._find_supplier_product_id(
             cr, uid, po_line, context=context
         )
+        if not product_id:
+            raise osv.except_osv(
+                _('Error'),
+                _('The product %s (id:%d) is not associated with the one in '
+                'the supplier\'s company') % (
+                    po_line.product_id.name, po_line.product_id.id
+                )
+            )
         on_change_vals = sale_line_obj.product_id_change(
             cr, uid, [], so_vals['pricelist_id'], product_id,
             po_line.product_qty, po_line.product_uom.id, False, False, False,
@@ -73,8 +82,8 @@ class purchase_order(osv.osv):
         )
         vals = {'product_id': product_id}
         vals.update(on_change_vals['value'])
+        vals['tax_id'] = [(6, 0, on_change_vals['value']['tax_id'])]
         vals.update({
-            'tax_id': [(6, 0, on_change_vals['value']['tax_id'])],
             'price_unit': po_line.price_unit,
             'product_uom_qty': po_line.product_qty,
             'product_uom': po_line.product_uom.id,
@@ -109,7 +118,7 @@ class purchase_order(osv.osv):
             so_vals['order_line'] = order_lines
             so_id = sale_obj.create(cr, supplier_uid, so_vals, context)
             wf_service = netsvc.LocalService("workflow")
-            wf_service.trg_validate(supplier_uid, 'sale.order', so_id, 'order_confirm', cr) #TODO optional
+            wf_service.trg_validate(supplier_uid, 'sale.order', so_id, 'order_confirm', cr)
             po.write({'is_intercompany': True}, context=context)
         return res
 
