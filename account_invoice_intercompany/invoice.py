@@ -177,7 +177,7 @@ class account_invoice(orm.Model):
             'price_unit': line.price_unit,
             'discount': line.discount,
             'quantity': line.quantity,
-            'product_id': line.product_id.id,
+            'product_id': product_id,
             'company_id': company_id,
             'invoice_line_tax_id': [
                 (6, 0, onchange_vals['value']['invoice_line_tax_id'])
