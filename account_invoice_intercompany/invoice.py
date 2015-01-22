@@ -154,6 +154,11 @@ class account_invoice(orm.Model):
         product_id = self._find_customer_product_id(
             cr, uid, line.product_id.id, partner_id, context=context
         )
+        if not product_id:
+            raise osv.except_osv(
+                "USER ERROR",
+                "No intercompany product exist for product id %s, code %s"
+                 % (line.product_id.id, line.product_id.code))
 
         invoice_line_obj = self.pool['account.invoice.line']
         onchange_vals = invoice_line_obj.product_id_change(
