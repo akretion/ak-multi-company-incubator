@@ -37,7 +37,7 @@ class purchase_order(osv.osv):
     def _prepare_linked_sale_order(self, cr, uid, po, shop_id, context=None):
         sale_obj = self.pool.get("sale.order")
         partner_obj = self.pool.get('res.partner')
-        partner_id = partner_obj.find_company_partner_id(
+        partner_id = partner_obj.find_company_customer_id(
             cr, uid,
             po.company_id.id,
             po.partner_id.partner_company_id.id,
