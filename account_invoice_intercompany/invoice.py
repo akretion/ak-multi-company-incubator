@@ -83,7 +83,8 @@ class account_invoice(orm.Model):
         journal_ids = journal_obj.search(
             cr, uid, [
                 ('company_id', '=', company_id),
-                ('type', '=', 'purchase')
+                ('type', '=', 'purchase'),
+                ('code', '=', 'EXJ')
             ],
             context=context
         )
@@ -154,28 +155,44 @@ class account_invoice(orm.Model):
         product_id = self._find_customer_product_id(
             cr, uid, line.product_id.id, partner_id, context=context
         )
-        if not product_id:
-            raise osv.except_osv(
-                "USER ERROR",
-                "No intercompany product exist for product id %s, code %s"
-                 % (line.product_id.id, line.product_id.code))
-
         invoice_line_obj = self.pool['account.invoice.line']
-        onchange_vals = invoice_line_obj.product_id_change(
-            cr, uid, False,
-            product_id,
-            False,
-            qty=line.quantity,
-            name=line.name,
-            type='in_invoice',
-            partner_id=partner_id,
-            fposition_id=invoice_vals.get('fiscal_position', False),
-            price_unit=line.price_unit,
-            currency_id=invoice_vals.get('currency_id', False),
-            context=context,
-            company_id=company_id
-        )
-        line_vals = onchange_vals['value']
+        # TO REMOVE IN V8, THERE ALWAYS SHOULD BE A PRODUCT_ID...
+        if not product_id:
+            line_vals = {}
+            if line.invoice_line_tax_id:
+                tax = line.invoice_line_tax_id[0]
+                search_tax_ids = self.pool['account.tax'].search(
+                    cr, uid,
+                    [('amount', '=', tax.amount),
+                    ('type_tax_use', '=', 'purchase'),
+                    ('price_include', '=', False)], context=context)
+                if search_tax_ids:
+                    line_vals.update({
+                        'invoice_line_tax_id': [
+                            (6, 0, [search_tax_ids[0]])
+            ]})
+            account = invoice_line_obj.default_get(cr, uid, ['account_id'], context=context)['account_id']
+            line_vals['account_id'] = account
+        else:
+            onchange_vals = invoice_line_obj.product_id_change(
+                cr, uid, False,
+                product_id,
+                False,
+                qty=line.quantity,
+                name=line.name,
+                type='in_invoice',
+                partner_id=partner_id,
+                fposition_id=invoice_vals.get('fiscal_position', False),
+                price_unit=line.price_unit,
+                currency_id=invoice_vals.get('currency_id', False),
+                context=context,
+                company_id=company_id
+            )
+            line_vals = onchange_vals['value']
+            line_vals.update({
+                'invoice_line_tax_id': [
+                    (6, 0, onchange_vals['value']['invoice_line_tax_id'])
+            ]})
         line_vals.update({
             'origin': line.invoice_id.number,
             'name': line.name,
@@ -184,9 +201,6 @@ class account_invoice(orm.Model):
             'quantity': line.quantity,
             'product_id': product_id,
             'company_id': company_id,
-            'invoice_line_tax_id': [
-                (6, 0, onchange_vals['value']['invoice_line_tax_id'])
-            ],
         })
         return line_vals
 
