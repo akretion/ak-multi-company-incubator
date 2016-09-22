@@ -2,9 +2,15 @@
    :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
    :alt: License: AGPL-3
 
-============================================
-Account Invoicing Partner for Multi-Company
-============================================
+===================================
+Account Invoicing for Multi-Company
+===================================
+
+Module for multicompany compatibility on invoicing
+
+Features:
+- use suspend_security when flag the last reconcile date on a partner
+
 
 
 
