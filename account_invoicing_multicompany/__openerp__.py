@@ -6,8 +6,7 @@
  'version': '8.0.0.1.0',
  'category': 'Generic Modules/Others',
  'license': 'AGPL-3',
- 'description': """""",
- 'author': 'Akretion, Odoo Community Association (OCA)',
+ 'author': 'Akretion',
  'website': 'http://www.akretion.com',
  'depends': [
      'account',
